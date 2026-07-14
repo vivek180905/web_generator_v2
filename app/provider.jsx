@@ -13,6 +13,12 @@ import { PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { ActionContext } from "@/context/ActionContext";
 import { useRouter } from "next/navigation";
 
+/**
+ * Root application provider that wraps children with authentication, theme,
+ * messaging, sidebar, and payment contexts.
+ * @param {{ children: React.ReactNode }} props - Component props.
+ * @returns {JSX.Element} The fully contextualized application shell.
+ */
 const Provider = ({ children }) => {
   const [messages, setMessages] = React.useState([]);
   const [userDetail, setUserDetail] = React.useState();
@@ -24,6 +30,11 @@ const Provider = ({ children }) => {
     IsAuthenticated();
   }, []);
 
+  /**
+   * Checks if the user is authenticated by reading localStorage and
+   * fetching user details from the Convex database. Redirects to
+   * the home page if no valid user session is found.
+   */
   const IsAuthenticated = async () => {
     if (typeof window !== "undefined") {
       let user;

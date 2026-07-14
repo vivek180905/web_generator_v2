@@ -16,6 +16,11 @@ import ReactMarkdown from "react-markdown";
 import { useSidebar } from "@/components/ui/sidebar";
 import { toast } from "sonner";
 
+/**
+ * Estimates the token count of a text string by counting whitespace-separated words.
+ * @param {string} inputText - The text to count tokens for.
+ * @returns {number} The approximate token count.
+ */
 const countToken = (inputText) => {
   if (!inputText) return 0;
   return inputText
@@ -24,6 +29,12 @@ const countToken = (inputText) => {
     .filter((word) => word).length;
 };
 
+/**
+ * Chat interface component that displays message history, handles user input,
+ * and communicates with the AI chat API. Uses a ref-based guard to prevent
+ * infinite re-triggering of AI responses.
+ * @returns {JSX.Element} The chat view with message list and input area.
+ */
 const ChatView = () => {
   const { id } = useParams();
   const convex = useConvex();
@@ -44,6 +55,10 @@ const ChatView = () => {
   }, [id]);
 
   // use workspace id to get the workspace data
+  /**
+   * Fetches workspace data (messages) from Convex and initializes the chat.
+   * Marks existing messages as processed to avoid re-triggering AI calls.
+   */
   const GetWorkspaceData = async () => {
     const result = await convex.query(api.workspace.GetWorkspaceData, {
       workspaceId: id,
@@ -71,6 +86,10 @@ const ChatView = () => {
     }
   }, [messages]);
 
+  /**
+   * Sends the current message history to the AI chat API and appends the
+   * AI response. Updates token usage in both local state and Convex database.
+   */
   const GetAiResponse = async () => {
     setLoading(true);
     const PROMPT = JSON.stringify(messages) + prompt.CHAT_PROMPT;
@@ -106,6 +125,10 @@ const ChatView = () => {
     }
   };
 
+  /**
+   * Validates token balance and appends a new user message to the conversation.
+   * @param {string} input - The user's message text.
+   */
   const onGenerate = (input) => {
     if(userDetail?.token<10)
     {

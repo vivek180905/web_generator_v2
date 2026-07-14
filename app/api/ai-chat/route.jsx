@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 import { GOOGLE_API_KEY, MODEL_NAME } from "@/configs/AiModel";
 
+/**
+ * Handles POST requests for the AI chat endpoint.
+ * Sends the user prompt to the Gemini API and returns the AI-generated text response.
+ * @param {Request} req - The incoming request containing a JSON body with a `prompt` field.
+ * @returns {NextResponse} JSON response with `result` (AI text) or `error` message.
+ */
 export async function POST(req) {
   try {
     const { prompt } = await req.json();
