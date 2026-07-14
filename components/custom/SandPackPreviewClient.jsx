@@ -10,7 +10,7 @@ function SandPackPreviewClient() {
 
   useEffect(() => {
     GetSandpackClient();
-  }, [sandpack && action]);
+  }, [sandpack, action]);
 
   const GetSandpackClient = async () => {
     const client = previewRef.current?.getClient();

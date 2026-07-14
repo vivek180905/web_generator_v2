@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useRef } from "react";
 import {
   SandpackProvider,
   SandpackLayout,
@@ -42,8 +42,13 @@ function CodeView() {
   const UpdateTokens = useMutation(api.users.UpdateToken);
   const { action, setAction } = useContext(ActionContext);
 
+  // Ref to track the last processed message count and prevent infinite loop
+  const lastProcessedMsgCount = useRef(0);
+
   React.useEffect(() => {
-    id && GetFiles();
+    if (id) {
+      GetFiles();
+    }
   }, [id]);
 
   React.useEffect(() => {
@@ -57,13 +62,18 @@ function CodeView() {
     });
     const mergedFiles = { ...Lookup.DEFAULT_FILE, ...result?.fileData };
     setFiles(mergedFiles);
+    // Mark all existing messages as processed so we don't re-trigger code gen
+    if (Array.isArray(result?.messages)) {
+      lastProcessedMsgCount.current = result.messages.length;
+    }
     setLoading(false);
   };
 
   React.useEffect(() => {
-    if (messages?.length > 0) {
-      const role = messages[messages?.length - 1].role;
+    if (messages?.length > 0 && messages.length > lastProcessedMsgCount.current) {
+      const role = messages[messages.length - 1].role;
       if (role === "user") {
+        lastProcessedMsgCount.current = messages.length;
         GenerateAiCode();
       }
     }
@@ -78,8 +88,6 @@ function CodeView() {
       });
       console.log(result.data);
       const aiResp = result.data;
-
-   
 
       const mergedFiles = { ...Lookup.DEFAULT_FILE, ...aiResp.files };
       setFiles(mergedFiles);

@@ -1,5 +1,5 @@
 "use client";
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -30,11 +30,14 @@ const ChatView = () => {
   const { messages = [], setMessages } = useContext(MessagesContext);
   const messagesArray = Array.isArray(messages) ? messages : [];
   const { userDetail,setUserDetail } = useContext(UserDetailContext);
-  const [userInput, setUserInput] = React.useState();
+  const [userInput, setUserInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const UpdateMessages = useMutation(api.workspace.UpdateMessages);
   const { toggleSidebar } = useSidebar();
   const UpdateTokens=useMutation(api.users.UpdateToken);
+  
+  // Ref to track whether we've already triggered AI for the current last message
+  const lastProcessedMsgCount = useRef(0);
 
   useEffect(() => {
     GetWorkspaceData();
@@ -45,20 +48,24 @@ const ChatView = () => {
     const result = await convex.query(api.workspace.GetWorkspaceData, {
       workspaceId: id,
     }); // Updated query name and parameter
-    if (Array.isArray(result.messages)) {
+    if (Array.isArray(result?.messages)) {
       setMessages(result.messages); // Set to messages array
+      // Mark all existing messages as already processed so we don't re-trigger AI
+      lastProcessedMsgCount.current = result.messages.length;
     } else {
       setMessages([]); // Fallback to empty array
-      console.error("Expected messages to be an array", result.messages);
+      lastProcessedMsgCount.current = 0;
+      console.error("Expected messages to be an array", result?.messages);
     }
     console.log(result);
   };
 
   useEffect(() => {
-    if (messages?.length > 0) {
-      const role = messages[messages?.length - 1].role;
+    if (messages?.length > 0 && messages.length > lastProcessedMsgCount.current) {
+      const role = messages[messages.length - 1].role;
       if (role === "user") {
         console.log("User message");
+        lastProcessedMsgCount.current = messages.length;
         GetAiResponse();
       }
     }
@@ -73,10 +80,13 @@ const ChatView = () => {
         prompt: PROMPT,
       });
       console.log(result.data.result);
-      setMessages((prev) => [
-        ...prev,
+      const newMessages = [
+        ...messages,
         { content: result.data.result, role: "ai" },
-      ]);
+      ];
+      // Update ref BEFORE setting state to prevent re-trigger
+      lastProcessedMsgCount.current = newMessages.length;
+      setMessages(newMessages);
       const aiResp = result.data.result; 
       const token = Number(userDetail?.token) - Number(countToken(JSON.stringify(aiResp)));
       setUserDetail(prev => ({ ...prev, token: token }));
@@ -85,7 +95,7 @@ const ChatView = () => {
         token: token, // Changed from 'tokens' to 'token'
       });
       await UpdateMessages({
-        messages: [...messages, { content: result.data.result, role: "ai" }],
+        messages: newMessages,
         workspaceId: id,
       });
     } catch (error) {
@@ -115,9 +125,9 @@ const ChatView = () => {
             style={{ backgroundColor: Colors.CHAT_BACKGROUND }}
             className="p-3 mb-2 rounded-lg flex gap-2 items-center leading-7"
           >
-            {message?.role === "user" && (
+            {message?.role === "user" && userDetail?.picture && (
               <Image
-                src={userDetail?.picture}
+                src={userDetail.picture}
                 alt="useImage"
                 width={35}
                 height={35}
@@ -141,9 +151,9 @@ const ChatView = () => {
       </div>
       {/* Input Section */}
       <div className="flex gap-2 items-end">
-        {userDetail && (
+        {userDetail?.picture && (
           <Image
-            src={userDetail?.picture}
+            src={userDetail.picture}
             alt="user"
             width={30}
             height={30}
@@ -179,3 +189,4 @@ const ChatView = () => {
 };
 
 export default ChatView;
+
