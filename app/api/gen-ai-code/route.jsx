@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 import { GOOGLE_API_KEY, MODEL_NAME } from "@/configs/AiModel";
 
+/**
+ * Extracts a JSON object from a string that may contain markdown fences,
+ * thinking blocks, or other surrounding text.
+ */
+function extractJSON(text) {
+  // 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
+  let cleaned = text.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
+
+  // 2. Find the first '{' and last '}' to extract the JSON object
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    throw new Error("No JSON object found in AI response");
+  }
+
+  return cleaned.substring(firstBrace, lastBrace + 1);
+}
+
 export async function POST(req) {
   try {
     const { prompt } = await req.json();
@@ -37,9 +56,29 @@ export async function POST(req) {
       }
     );
 
-    let aiResponseText = response.data.candidates[0].content.parts[0].text;
-    aiResponseText = aiResponseText.replace(/^```json\s*/, "").replace(/\s*```$/, "").trim();
-    const parsedResponse = JSON.parse(aiResponseText);
+    const candidates = response.data?.candidates;
+    if (!candidates || candidates.length === 0 || !candidates[0]?.content?.parts?.[0]?.text) {
+      console.error("Code Gen: No candidates returned.", JSON.stringify(response.data));
+      return NextResponse.json({ error: "AI returned no response. The prompt may have been blocked." }, { status: 500 });
+    }
+
+    let aiResponseText = candidates[0].content.parts[0].text;
+    
+    let parsedResponse;
+    try {
+      // First try direct parse (when responseMimeType works correctly)
+      parsedResponse = JSON.parse(aiResponseText.trim());
+    } catch (directParseError) {
+      // Fallback: extract JSON from surrounding text/fences
+      try {
+        const extracted = extractJSON(aiResponseText);
+        parsedResponse = JSON.parse(extracted);
+      } catch (extractError) {
+        console.error("Code Gen: Failed to parse AI response as JSON.");
+        console.error("Raw response (first 500 chars):", aiResponseText.substring(0, 500));
+        return NextResponse.json({ error: "AI returned invalid JSON. Please try again." }, { status: 500 });
+      }
+    }
 
     return NextResponse.json(parsedResponse);
 

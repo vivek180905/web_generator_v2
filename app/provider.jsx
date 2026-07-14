@@ -14,7 +14,7 @@ import { ActionContext } from "@/context/ActionContext";
 import { useRouter } from "next/navigation";
 
 const Provider = ({ children }) => {
-  const [messages, setMessages] = React.useState();
+  const [messages, setMessages] = React.useState([]);
   const [userDetail, setUserDetail] = React.useState();
   const [action, setAction] = React.useState();
   const convex = useConvex();
@@ -26,7 +26,13 @@ const Provider = ({ children }) => {
 
   const IsAuthenticated = async () => {
     if (typeof window !== "undefined") {
-      const user = JSON.parse(localStorage.getItem("user"));
+      let user;
+      try {
+        user = JSON.parse(localStorage.getItem("user"));
+      } catch (e) {
+        console.error("Corrupted user data in localStorage, clearing.", e);
+        localStorage.removeItem("user");
+      }
       //fetch from db
       if(!user)
       {

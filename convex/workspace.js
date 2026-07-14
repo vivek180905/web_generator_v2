@@ -23,7 +23,7 @@ export const CreateWorkSpace = mutation({
 
 export const GetWorkspaceData = query({
   args: {
-    workspaceId: v.string(),
+    workspaceId: v.id("workspace"),
   },
   handler: async (ctx, args) => {
     const workspace = await ctx.db.get(args.workspaceId);

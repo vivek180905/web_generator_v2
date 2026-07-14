@@ -13,7 +13,7 @@ import { api } from "@/convex/_generated/api";
 const Hero = () => {
   const CreateWorkspace = useMutation(api.workspace.CreateWorkSpace);
 
-  const [userInput, setUserInput] = React.useState();
+  const [userInput, setUserInput] = React.useState("");
   const { messages, setMessages } = React.useContext(MessagesContext);
   const { userDetail, setUserDetail } = React.useContext(UserDetailContext);
   const [openDialog, setOpenDialog] = React.useState(false);
@@ -24,10 +24,10 @@ const Hero = () => {
       setOpenDialog(true);
       return;
     }
-    setMessages({
+    setMessages([{
       role: "user",
       content: input,
-    });
+    }]);
     
     const workspaceId = await CreateWorkspace({
       user: userDetail._id,

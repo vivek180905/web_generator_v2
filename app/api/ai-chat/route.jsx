@@ -14,7 +14,13 @@ export async function POST(req) {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    const aiResponse = response.data.candidates[0].content.parts[0].text;
+    const candidates = response.data?.candidates;
+    if (!candidates || candidates.length === 0 || !candidates[0]?.content?.parts?.[0]?.text) {
+      console.error("AI Chat: No candidates returned.", JSON.stringify(response.data));
+      return NextResponse.json({ error: "AI returned no response. The prompt may have been blocked by safety filters." }, { status: 500 });
+    }
+
+    const aiResponse = candidates[0].content.parts[0].text;
     return NextResponse.json({ result: aiResponse });
 
   } catch (error) {
