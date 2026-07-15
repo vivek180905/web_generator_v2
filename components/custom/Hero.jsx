@@ -10,6 +10,11 @@ import { useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 
+/**
+ * Hero section component displayed on the landing page. Contains the main
+ * prompt input, suggestion chips, and triggers workspace creation on submit.
+ * @returns {JSX.Element} The hero section with input and suggestions.
+ */
 const Hero = () => {
   const CreateWorkspace = useMutation(api.workspace.CreateWorkSpace);
 
@@ -19,6 +24,11 @@ const Hero = () => {
   const [openDialog, setOpenDialog] = React.useState(false);
   const router=useRouter();
 
+  /**
+   * Handles user prompt submission. Opens sign-in dialog if unauthenticated,
+   * otherwise creates a new workspace and navigates to it.
+   * @param {string} input - The user's prompt text.
+   */
   const onGenerate = async (input) => {
     if (!userDetail?.name) {
       setOpenDialog(true);

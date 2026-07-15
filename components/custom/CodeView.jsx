@@ -22,6 +22,11 @@ import SandPackPreviewClient from "./SandPackPreviewClient";
 import { ActionContext } from "@/context/ActionContext";
 import { toast } from "sonner";
 
+/**
+ * Estimates the token count of a text string by counting whitespace-separated words.
+ * @param {string} inputText - The text to count tokens for.
+ * @returns {number} The approximate token count.
+ */
 const countToken = (inputText) => {
   if (!inputText) return 0;
   return inputText
@@ -30,6 +35,12 @@ const countToken = (inputText) => {
     .filter((word) => word).length;
 };
 
+/**
+ * Code editor and preview component that displays AI-generated files in a
+ * Sandpack environment. Handles code generation requests and manages the
+ * code/preview tab switching.
+ * @returns {JSX.Element} The code editor with file explorer and live preview.
+ */
 function CodeView() {
   const convex = useConvex();
   const { id } = useParams();
@@ -55,6 +66,10 @@ function CodeView() {
     setActiveTab("preview");
   }, [action]);
 
+  /**
+   * Fetches saved file data from the workspace in Convex and merges it
+   * with the default template files. Marks existing messages as processed.
+   */
   const GetFiles = async () => {
     setLoading(true);
     const result = await convex.query(api.workspace.GetWorkspaceData, {
@@ -79,6 +94,11 @@ function CodeView() {
     }
   }, [messages]);
 
+  /**
+   * Sends the message history to the AI code generation API, parses the
+   * structured response, and updates files in both local state and Convex.
+   * Deducts tokens from the user's balance.
+   */
   const GenerateAiCode = async () => {
     setLoading(true);
     const PROMPT = JSON.stringify(messages) + " " + Prompt.CODE_GEN_PROMPT;

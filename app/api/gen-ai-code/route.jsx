@@ -5,6 +5,9 @@ import { GOOGLE_API_KEY, MODEL_NAME } from "@/configs/AiModel";
 /**
  * Extracts a JSON object from a string that may contain markdown fences,
  * thinking blocks, or other surrounding text.
+ * @param {string} text - The raw AI response text potentially wrapped in markdown.
+ * @returns {string} The extracted JSON string.
+ * @throws {Error} If no valid JSON object boundaries are found.
  */
 function extractJSON(text) {
   // 1. Strip markdown code fences (```json ... ``` or ``` ... ```)
@@ -21,6 +24,13 @@ function extractJSON(text) {
   return cleaned.substring(firstBrace, lastBrace + 1);
 }
 
+/**
+ * Handles POST requests for the AI code generation endpoint.
+ * Sends the user prompt to the Gemini API with JSON response mode and system instructions,
+ * then parses the AI response into a structured project object with files.
+ * @param {Request} req - The incoming request containing a JSON body with a `prompt` field.
+ * @returns {NextResponse} JSON response with the parsed project structure or an `error` message.
+ */
 export async function POST(req) {
   try {
     const { prompt } = await req.json();
