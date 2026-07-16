@@ -6,10 +6,12 @@ import { UserDetailContext } from "../../context/UserDetailContext";
 import { ActionContext } from "../../context/ActionContext";
 import { Download, Rocket } from 'lucide-react';
 import { usePathname } from "next/navigation";
+import SignInDialog from "./SignInDialog";
 
 const Header = () => {
   const { userDetail, setUserDetail } = React.useContext(UserDetailContext);
   const { action, setAction } = React.useContext(ActionContext);
+  const [openDialog, setOpenDialog] = React.useState(false);
 
   const path=usePathname();
 
@@ -25,12 +27,13 @@ const Header = () => {
       <Image src={"/image.png"} width={40} height={40} alt="Logo" />
       {!userDetail && (
         <div className="flex gap-5">
-          <Button variant="ghost">Sign In</Button>
+          <Button variant="ghost" onClick={() => setOpenDialog(true)}>Sign In</Button>
           <Button
             className="text-white"
             style={{
               backgroundColor: Colors.BLUE,
             }}
+            onClick={() => setOpenDialog(true)}
           >
             Get Started
           </Button>
@@ -50,6 +53,10 @@ const Header = () => {
           </Button>
         </div>
       )}
+      <SignInDialog
+        openDialog={openDialog}
+        closeDialog={(v) => setOpenDialog(v)}
+      />
     </div>
   );
 };
