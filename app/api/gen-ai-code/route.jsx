@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import axios from "axios";
-import { GOOGLE_API_KEY, MODEL_NAME } from "@/configs/AiModel";
+import { GoogleGenAI } from "@google/genai";
+import { MODEL_NAME } from "@/configs/AiModel";
 
 /**
  * Extracts a JSON object from a string that may contain markdown fences,
@@ -26,54 +26,50 @@ function extractJSON(text) {
 
 /**
  * Handles POST requests for the AI code generation endpoint.
- * Sends the user prompt to the Gemini API with JSON response mode and system instructions,
- * then parses the AI response into a structured project object with files.
+ * Uses the @google/genai SDK with JSON response mode and system instructions.
  * @param {Request} req - The incoming request containing a JSON body with a `prompt` field.
  * @returns {NextResponse} JSON response with the parsed project structure or an `error` message.
  */
 export async function POST(req) {
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+
+  if (!apiKey) {
+    console.error("Code Gen: NEXT_PUBLIC_GEMINI_API_KEY is not set.");
+    return NextResponse.json(
+      { error: "Server misconfiguration: API key is not set. Please add NEXT_PUBLIC_GEMINI_API_KEY to your environment variables." },
+      { status: 500 }
+    );
+  }
+
   try {
     const { prompt } = await req.json();
+    const ai = new GoogleGenAI({ apiKey });
 
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GOOGLE_API_KEY}`,
-      {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-            responseMimeType: "application/json",
-            maxOutputTokens: 65536, // Lite model supports high output
-            temperature: 0.4 // Keep it low for precise code
-        },
-        // THIS FIXES THE HELLO WORLD ISSUE
-        systemInstruction: {
-          parts: [{ 
-            text: `You are an expert React developer. 
-            CRITICAL RULES:
-            1. You must generate a FULL, WORKING project.
-            2. App.js must IMPORT and USE the components you generate (Header, Footer, etc).
-            3. NEVER return a simple "Hello World" in App.js.
-            4. Return valid JSON only.` 
-          }]
-        }
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 65536,
+        temperature: 0.4,
+        systemInstruction: `You are an expert React developer. 
+CRITICAL RULES:
+1. You must generate a FULL, WORKING project.
+2. App.js must IMPORT and USE the components you generate (Header, Footer, etc).
+3. NEVER return a simple "Hello World" in App.js.
+4. Return valid JSON only.`,
       },
-      {
-        headers: { "Content-Type": "application/json" }
-      }
-    );
+    });
 
-    const candidates = response.data?.candidates;
-    if (!candidates || candidates.length === 0 || !candidates[0]?.content?.parts?.[0]?.text) {
-      console.error("Code Gen: No candidates returned.", JSON.stringify(response.data));
-      return NextResponse.json({ error: "AI returned no response. The prompt may have been blocked." }, { status: 500 });
+    let aiResponseText = response.text;
+    if (!aiResponseText) {
+      console.error("Code Gen: Empty response from model.");
+      return NextResponse.json(
+        { error: "AI returned no response. The prompt may have been blocked." },
+        { status: 500 }
+      );
     }
 
-    let aiResponseText = candidates[0].content.parts[0].text;
-    
     let parsedResponse;
     try {
       // First try direct parse (when responseMimeType works correctly)
@@ -86,14 +82,19 @@ export async function POST(req) {
       } catch (extractError) {
         console.error("Code Gen: Failed to parse AI response as JSON.");
         console.error("Raw response (first 500 chars):", aiResponseText.substring(0, 500));
-        return NextResponse.json({ error: "AI returned invalid JSON. Please try again." }, { status: 500 });
+        return NextResponse.json(
+          { error: "AI returned invalid JSON. Please try again." },
+          { status: 500 }
+        );
       }
     }
 
     return NextResponse.json(parsedResponse);
-
   } catch (error) {
-    console.error("Code Gen Error:", error.response?.data || error.message);
-    return NextResponse.json({ error: "Failed to generate code" }, { status: 500 });
+    console.error("Code Gen Error:", error.message || error);
+    return NextResponse.json(
+      { error: "Failed to generate code: " + (error.message || "Unknown error") },
+      { status: 500 }
+    );
   }
 }
